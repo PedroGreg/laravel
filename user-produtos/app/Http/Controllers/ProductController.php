@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -13,20 +14,22 @@ class ProductController extends Controller
         return response()->json($response);
     }
 
+    //Create
     public function store(Request $request)
     {
         $data = $request->all();
         if ($request->hasFile('foto') && $request->file('foto')->isValid()) {
-            
+
             $caminho = $request->file('foto')->store('produtos', 'public');
 
             $data['foto'] = $caminho;
         }
-        
+
         $product = Product::create($data);
         return response()->json($product, 201);
     }
 
+    //Read
     public function show($id)
     {
         $product = Product::find($id);
@@ -38,23 +41,37 @@ class ProductController extends Controller
         }
     }
 
-    public function update(Request $request, $id){
+    //Update
+    public function update(Request $request, $id)
+    {
         $product = Product::find($id);
         if (!$product) {
-            return response()->json(["message"=> ""],404);
+            return response()->json(["message" => "O produto não existe"], 404);
         }
-        $product->update($request->all());
+        $data = $request->all();
+        if ($request->hasFile("foto") && $request->file('foto')->isValid()) {
+            if ($product->foto) {
+                Storage::disk('public')->delete($product->foto);
+            }
+            $caminho = $request->file('foto')->store('produtos', 'public');
+            $data['foto'] = $caminho;
+        }
+        $product->update($data);
         return response()->json($product, 200);
+
     }
 
-    public function destroy($id){
+    //Delete
+    public function destroy($id)
+    {
         $product = Product::find($id);
-        if (!$product){
-            return response()->json(["message"=> "O produto não existe"],404);
+        if (!$product) {
+            return response()->json(["message" => "O produto não existe"], 404);
         }
-        else{
-            $product->delete();
-            return response()->json(["message" => "O produto {$product->nome} foi deletado!"], 200);
+        if ($product->foto){
+            Storage::disk('public')->delete($product->foto);
         }
+        $product->delete();
+        return response()->json(["message" => "O produto {$product->nome} foi deletado!"], 200);
     }
 }
